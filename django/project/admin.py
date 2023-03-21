@@ -10,7 +10,7 @@ from .models import TechnologyPlatform, DigitalStrategy, HealthFocusArea, \
     UNICEFGoal, UNICEFResultArea, UNICEFCapabilityLevel, UNICEFCapabilityCategory, \
     UNICEFCapabilitySubCategory, UNICEFSector, RegionalPriority, HardwarePlatform, NontechPlatform, \
     PlatformFunction, Portfolio, InnovationCategory, CPD, ProjectImportV2, InnovationWay, ISC, ApprovalState, Stage, \
-    Phase, ProjectVersion, Solution, CountrySolution
+    Phase, ProjectVersion, Solution, CountrySolution, PortfolioProblemStatement
 from country.models import CountryOffice
 from core.utils import make_admin_list
 
@@ -305,11 +305,19 @@ class PortfolioAdmin(ExportActionMixin, AllObjectsAdmin):
 class ProblemStatementAdmin(ExportActionMixin, admin.ModelAdmin):
     model = ProblemStatement
     resource_class = ProblemStatementResource
-    list_display = ['id', 'name', 'description', 'portfolio', 'is_active']
+    list_display = ['id', 'name', 'description', 'get_portfolios', 'is_active']
 
     def get_queryset(self, request):  # pragma: no cover
         return self.model.all_objects.all()
 
+def get_portfolios(self, obj):
+        return ", ".join([str(p) for p in obj.portfolios.all()])
+
+get_portfolios.short_description = 'Portfolios'
+
+class PortfolioProblemStatementsInline(admin.TabularInline):
+        model = PortfolioProblemStatement
+        extra = 1
 
 class ResultAreaInline(ViewOnlyInlineMixin, admin.TabularInline):
     model = UNICEFResultArea
@@ -411,6 +419,10 @@ class SolutionAdmin(ExportActionMixin, admin.ModelAdmin):
                                                                cwd.people_reached) for cwd in countries_with_data]
         return ', '.join(countries_with_people_reached)
 
+class PortfolioProblemStatementAdmin(admin.ModelAdmin):
+    list_display = ['id', 'portfolio_id', 'problem_statement_id']
+    list_filter = ['portfolio_id']
+    search_fields = ['portfolio_id', 'problem_statement_id']
 
 admin.site.register(TechnologyPlatform, TechnologyPlatformAdmin)
 admin.site.register(DigitalStrategy, DigitalStrategyAdmin)
@@ -440,3 +452,4 @@ admin.site.register(Stage, StageAdmin)
 admin.site.register(Phase, PhaseAdmin)
 admin.site.register(ProblemStatement, ProblemStatementAdmin)
 admin.site.register(Solution, SolutionAdmin)
+admin.site.register(PortfolioProblemStatement, PortfolioProblemStatementAdmin)

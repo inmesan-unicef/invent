@@ -369,8 +369,8 @@ class Portfolio(ExtendedNameOrderedSoftDeletedModel):
 
 class ProblemStatement(ExtendedNameOrderedSoftDeletedModel):
     description = models.CharField(max_length=1024)
-    portfolio = models.ForeignKey(Portfolio, blank=False, null=False, on_delete=models.CASCADE,
-                                  related_name='problem_statements')
+    portfolio = models.ForeignKey(Portfolio, on_delete=models.CASCADE, null=True, blank=True)
+    portfolios = models.ManyToManyField(Portfolio, through='PortfolioProblemStatement', related_name='problem_statements')
 
     # This is a workaround for some strange issue regarding ActiveQuerySet
     class Meta:
@@ -977,3 +977,10 @@ class CountrySolution(models.Model):
 
     def __str__(self):  # pragma: no cover
         return f"{self.solution} in {self.country}"
+
+class PortfolioProblemStatement(ExtendedModel):
+    portfolio = models.ForeignKey(Portfolio, on_delete=models.CASCADE)
+    problem_statement = models.ForeignKey(ProblemStatement, on_delete=models.CASCADE)
+    
+    class Meta:
+        unique_together = ('portfolio', 'problem_statement')

@@ -312,13 +312,28 @@ class SolutionUpdateViewSet(SolutionAccessMixin, UpdateModelMixin, GenericViewSe
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
 
-        # Get the portfolio_problem_statements data to set the portfolios and problem_statements
+        # Update PortfolioProblemStatement objects
         portfolio_problem_statements = request.data.get('portfolio_problem_statements', [])
+        for portfolio_problem_statement in portfolio_problem_statements:
+            portfolio_id = portfolio_problem_statement['portfolio_id']
+            problem_statement_ids = portfolio_problem_statement['problem_statements']
+            for problem_statement_id in problem_statement_ids:
+                obj, created = PortfolioProblemStatement.objects.update_or_create(
+                    portfolio_id=portfolio_id,
+                    problem_statement_id=problem_statement_id,
+                    defaults={
+                        'portfolio': Portfolio.objects.get(pk=portfolio_id),
+                        'problem_statement': ProblemStatement.objects.get(pk=problem_statement_id),
+                    }
+                )
+
+        #portfolio_problem_statements = request.data.get('portfolio_problem_statements', [])
         portfolios = list(set(d['portfolio_id'] for d in portfolio_problem_statements))
         problem_statements = list(set(ps for d in portfolio_problem_statements for ps in d['problem_statements']))
         is_active = request.data.get("is_active", True)
         people_reached = request.data.get("people_reached", None)
 
+        
         # Update the instance with the extracted data
         instance.portfolios.set(portfolios)
         instance.problem_statements.set(problem_statements)
