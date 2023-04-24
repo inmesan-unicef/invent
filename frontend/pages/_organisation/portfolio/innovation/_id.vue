@@ -41,6 +41,10 @@
             <h1 class="portfolio-summary"><Translate>Summary</Translate></h1>
             <p>{{ description }}</p>
           </div>
+          <div v-if="tab === 3" class="map">
+            <solution-map />
+            <portfolio-solution-box />
+          </div>
         </section>
         <!-- tabs -->
         <div class="DashboardListView">
@@ -58,6 +62,9 @@
 
 <script>
 import MainSolutionsTable from '@/components/solution/dashboard/MainSolutionsTable'
+import TableTopActions from '@/components/portfolio/dashboard/TableTopActions'
+import SolutionMap from '@/components/solution/map/SolutionMap.vue'
+import PortfolioSolutionBox from '@/components/solution/map/PortfolioSolutionBox.vue'
 import Tabs from '@/components/common/Tabs'
 
 import { mapState, mapGetters, mapActions } from 'vuex'
@@ -65,7 +72,10 @@ import { mapState, mapGetters, mapActions } from 'vuex'
 export default {
   components: {
     MainSolutionsTable,
+    SolutionMap,
+    TableTopActions,
     Tabs,
+    PortfolioSolutionBox,
   },
   data() {
     return {
@@ -79,37 +89,39 @@ export default {
           name: this.$gettext('Summary'),
           icon: 'braille',
         },
-        // {
-        //   id: 2,
-        //   name: this.$gettext('problem statement matrix'),
-        //   icon: 'th',
-        // },
-        // {
-        //   id: 3,
-        //   name: this.$gettext('map view'),
-        //   icon: 'columns',
-        // },
+        {
+          id: 2,
+          name: this.$gettext('problem statement matrix'),
+          icon: 'th',
+        },
+        {
+          id: 3,
+          name: this.$gettext('map view'),
+          icon: 'columns',
+        },
       ],
       tab: 1,
     }
   },
   async fetch({ store, query, error, params }) {
     // setup search
-    await store.dispatch('solutions/loadSolutionsList', params.id)
+    const allSolutionsList = await store.dispatch('solutions/loadSolutionsList', params.id)
+    const allActiveSolutionsList = await store.dispatch('solutions/loadAllActiveSolutionsList')
+    const countriesSol = allSolutionsList.solutions.map((solution) => ({
+      ...solution,
+      countries: allActiveSolutionsList.find((activeSolution) => activeSolution.id === solution.id).countries,
+    }))
     store.dispatch('search/resetSearch')
     store.dispatch('landing/resetSearch')
     store.dispatch('dashboard/setSearchOptions', query)
 
     // search setup
-    store.commit('search/SET_SEARCH', {
-      key: 'portfolio',
-      val: params.id,
-    })
-    store.commit('search/SET_SEARCH', {
-      key: 'portfolio_page',
-      val: 'portfolio',
-    })
-    store.commit('search/SET_SEARCH', { key: 'scores', val: true })
+    store.commit('search/SET_SOLUTION_MAP', countriesSol)
+    // store.commit('search/SET_SEARCH', {
+    //   key: 'portfolio_page',
+    //   val: 'portfolio',
+    // })
+    // store.commit('search/SET_SEARCH', { key: 'scores', val: true })
 
     await Promise.all([
       store.dispatch('portfolio/getPortfolios', 'active-list'),
@@ -121,7 +133,6 @@ export default {
   },
   computed: {
     ...mapState({
-      ps: (state) => state.search.filter.ps,
       portfolios: (state) => state.portfolio.portfolios,
     }),
     ...mapGetters({

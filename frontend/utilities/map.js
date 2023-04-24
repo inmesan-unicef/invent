@@ -1,13 +1,6 @@
 import qs from 'qs'
 
-export const searchIn = () => [
-  'name',
-  'country',
-  'overview',
-  'partner',
-  'donor',
-  'id'
-]
+export const searchIn = () => ['name', 'country', 'overview', 'partner', 'donor', 'id']
 
 export const stateGenerator = () => ({
   selectedCountry: null,
@@ -19,11 +12,16 @@ export const stateGenerator = () => ({
   searchString: '',
   searchIn: searchIn(),
   projectsMap: [],
+  solutionsMap: [],
 })
 
 export const gettersGenerator = () => ({
   getProjectsMap(state) {
     const map = state.projectsMap ? state.projectsMap.map((r) => ({ ...r })) : []
+    return [...map]
+  },
+  getSolutionsMap(state, rootGetters) {
+    const map = state.solutionsMap ? state.solutionsMap.map((r) => ({ ...r })) : []
     return [...map]
   },
   getCountryPins(state, getters, rootState, rootGetters) {
@@ -54,6 +52,9 @@ export const gettersGenerator = () => ({
   getCurrentZoom: (state) => state.currentZoom,
   getActiveCountry: (state) => state.activeCountry,
   getCountryProjects: (state) => (id) => state.projectsMap.filter((p) => p.country === id),
+  getCountrySolutions: (state, rootGetters) => (id) => {
+    return state.solutionsMap.filter((p) => p.countries.some((cId) => cId.id === id))
+  },
   getMapReady: (state) => state.mapReady,
   getProjectBoxActiveTab: (state) => state.projectBoxActiveTab,
   getActiveSubLevel: (state) => state.activeSubLevel,
@@ -70,35 +71,38 @@ export const gettersGenerator = () => ({
       type: 'map',
     }
   },
+
   getActiveTabProjects: (state, getters) =>
     state.projectBoxActiveTab === 'subNational'
       ? getters.getSelectedCountrySubNationalProjects
       : getters.getSelectedCountryNationalProjects,
+  getActiveTabSolutions: (state, getters) =>
+    state.projectBoxActiveTab === 'subNational'
+      ? getters.getSelectedCountrySubNationalSolutions
+      : getters.getSelectedCountryNationalSolutions,
   getSelectedCountryProjects: (state) =>
     state.projectsMap.filter(
+      (p) => p.country && (p.country === state.selectedCountry || p.country === state.activeCountry)
+    ),
+  getSelectedCountrySolutions: (state, rootGetters) => {
+    return state.solutionsMap.filter(
       (p) =>
-        p.country &&
-        (p.country === state.selectedCountry ||
-          p.country === state.activeCountry)
-    ),
+        p.countries.length > 0 &&
+        (p.countries.some((cId) => cId === state.selectedCountry) ||
+          p.countries.some((cId) => cId === state.activeCountry))
+    )
+  },
   getSelectedCountrySubNationalProjects: (state, getters) =>
-    getters.getSelectedCountryProjects.filter(
-      (cp) => cp.coverage && cp.coverage.length > 0
-    ),
-  getSelectedCountryNationalProjects: (state, getters) =>
-    getters.getSelectedCountryProjects,
-  getSelectedCountryCurrentSubLevelProjects: (
-    state,
-    getters,
-    rootState,
-    rootGetters
-  ) => {
+    getters.getSelectedCountryProjects.filter((cp) => cp.coverage && cp.coverage.length > 0),
+  // To check
+  getSelectedCountrySubNationalSolutions: (state, getters) =>
+    getters.getSelectedCountrySolutions.filter((cp) => cp.coverage && cp.coverage.length > 0),
+  getSelectedCountryNationalProjects: (state, getters) => getters.getSelectedCountryProjects,
+  getSelectedCountryCurrentSubLevelProjects: (state, getters, rootState, rootGetters) => {
     const id = state.activeSubLevel
     const subLevel = rootGetters['countries/getSubLevelDetails'](id)
     return getters.getSelectedCountrySubNationalProjects.filter((snp) =>
-      snp.coverage.some(
-        (c) => c.district === id || c.district === subLevel.name
-      )
+      snp.coverage.some((c) => c.district === id || c.district === subLevel.name)
     )
   },
 })
@@ -109,10 +113,7 @@ export const actionsGenerator = () => ({
       await dispatch('countries/loadGeoJSON', id, { root: true })
       await dispatch('countries/loadCountryDetails', id, { root: true })
     }
-    if (
-      getters.getFilteredCountries &&
-      getters.getFilteredCountries.length === 1
-    ) {
+    if (getters.getFilteredCountries && getters.getFilteredCountries.length === 1) {
       commit('SET_FILTERED_COUNTRIES', [id])
     }
     commit('SET_SELECTED_COUNTRY', id)
@@ -129,8 +130,7 @@ export const actionsGenerator = () => ({
           dashboardType: undefined,
           dashboardId: undefined,
         },
-        paramsSerializer: (params) =>
-          qs.stringify(params, { arrayFormat: 'repeat' }),
+        paramsSerializer: (params) => qs.stringify(params, { arrayFormat: 'repeat' }),
       })
       return data
     } catch (e) {
@@ -141,11 +141,7 @@ export const actionsGenerator = () => ({
     commit('SET_CURRENT_ZOOM', value)
   },
   setActiveCountry({ commit, getters, dispatch }, value) {
-    if (
-      value &&
-      getters.getSelectedCountry &&
-      getters.getSelectedCountry !== value
-    ) {
+    if (value && getters.getSelectedCountry && getters.getSelectedCountry !== value) {
       dispatch('setSelectedCountry', value)
     }
     if (!value) {
@@ -177,6 +173,9 @@ export const actionsGenerator = () => ({
 export const mutationsGenerator = () => ({
   SET_PROJECT_MAP: (state, projects) => {
     state.projectsMap = projects
+  },
+  SET_SOLUTION_MAP: (state, solutions) => {
+    state.solutionsMap = solutions
   },
   SET_SELECTED_COUNTRY: (state, value) => {
     state.selectedCountry = value
