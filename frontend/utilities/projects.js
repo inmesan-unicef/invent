@@ -307,7 +307,7 @@ export const publishRules = () => {
     capability_categories: {},
     capability_subcategories: {},
     platforms: {
-      required: true,
+      required: false,
     },
     strategies: {
       required: true,
