@@ -13,7 +13,7 @@
     :popper-class="optionsWithValues.length > innerValue.length ? 'TeamSelectorDropdown' : 'NoDisplay'"
     class="FocalPointSelector"
   >
-    <el-option v-for="item in optionsWithValues" :key="item.email" :label="item.label" :value="item.email"
+    <el-option v-for="item in filteredOptions" :key="item.label" :label="item.label" :value="item.label"
       ><span style="float: left">{{ item.label }}</span>
       <br />
       <span class="email"
@@ -64,14 +64,16 @@ export default {
     innerValue: {
       get() {
         if (this.value !== null) {
-          return [this.value]
+          return [this.userProfiles.find((profile) => profile.email === this.value).label]
         } else {
           return []
         }
       },
       set(value) {
         if (value[0]) {
-          this.$emit('change', value[value.length - 1])
+          const email = this.userProfiles.find((profile) => profile.label === value[value.length - 1]).email
+          console.log(email)
+          this.$emit('change', email)
         } else {
           this.$emit('change', null)
         }

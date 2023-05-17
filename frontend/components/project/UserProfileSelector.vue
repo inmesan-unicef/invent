@@ -12,10 +12,10 @@
     :popper-class="popperClass ? 'TeamSelectorDropdown' : 'NoDisplay'"
   >
     <el-option
-      v-for="item in optionsWithValues"
-      :key="item.id"
+      v-for="item in filteredOptions"
+      :key="item.value"
       :label="item.label"
-      :value="item.id"
+      :value="item.value"
       :disabled="item.disabled ? item.disabled : false"
       ><span style="float: left">{{ item.label }}</span>
       <br />
@@ -77,21 +77,32 @@ export default {
         /**Get user ids [numArray] and translate to email array from user list, if omit email string exist we find if user id and remove it */
         if (this.omit) {
           const omitId = this.userProfiles.find((user) => user.email === this.omit).id
-          return this.value.filter((userId) => userId !== omitId)
+          const valueOmmited = this.value.filter((userId) => userId !== omitId)
+          return valueOmmited.map((userId) => {
+            const profile = this.userProfiles.find((profile) => profile.id === userId)
+            return profile.label
+          })
         } else {
-          return this.value
+          return this.value.map((userId) => {
+            const profile = this.userProfiles.find((profile) => profile.id === userId)
+            return profile.label
+          })
         }
       },
       set(value) {
         /**Get email array as input and translate to userIds number array, If omit user exist we add it back */
 
         if (this.omit) {
-          const omitId = this.userProfiles.find((user) => user.email === this.omit).id
-          const idArray = omitId ? [...value, omitId] : value
-
+          const omitLabel = this.userProfiles.find((user) => user.email === this.omit).label
+          const labelArray = omitLabel ? [...value, omitLabel] : value
+          console.log(labelArray)
+          const idArray = labelArray.map((label) => this.userProfiles.find((profile) => profile.label === label).id)
+          console.log(idArray)
           this.$emit('change', [...new Set(idArray)])
         } else {
-          this.$emit('change', value)
+          const idArray = value.map((label) => this.userProfiles.find((profile) => profile.label === label).id)
+          console.log(idArray)
+          this.$emit('change', idArray)
         }
       },
     },

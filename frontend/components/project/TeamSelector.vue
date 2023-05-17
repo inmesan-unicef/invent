@@ -1,18 +1,17 @@
 <template>
   <lazy-el-select
-    v-model="innerValue"
-    :multiple="multiple"
     slot="reference"
+    v-model="innerValue"
+    :placeholder="$gettext('Type and select a name') | translate"
+    :remote-method="filterMethod"
+    :multiple="multiple"
     filterable
     autocomplete
     remote
     clearable
-    :remote-method="filterMethod"
-    :placeholder="$gettext('Type and select a name') | translate"
-    :popper-class="optionsWithValues.length > innerValue.length ? 'TeamSelectorDropdown' : 'NoDisplay'"
     class="TeamSelector"
   >
-    <el-option v-for="person in optionsWithValues" :key="person.id" :label="person.label" :value="person.id">
+    <el-option v-for="person in filteredOptions" :key="person.value" :label="person.label" :value="person.value">
       <span style="float: left">{{ person.label }}</span>
       <br />
       <span class="email"
@@ -25,13 +24,7 @@
 <script>
 import { mapGetters } from 'vuex'
 
-import OrganisationItem from '../common/OrganisationItem'
-
 export default {
-  components: {
-    OrganisationItem,
-  },
-
   $_veeValidate: {
     value() {
       return this.value
@@ -63,18 +56,20 @@ export default {
     }),
     innerValue: {
       get() {
-        return this.value
+        /**Get user ids [numArray] and translate to email array from user list, if omit email string exist we find if user id and remove it */
+
+        return this.value.map((userId) => {
+          const profile = this.userProfiles.find((profile) => profile.id === userId)
+          return profile.label
+        })
       },
       set(value) {
-        this.$emit('change', value)
+        /**Get email array as input and translate to userIds number array, If omit user exist we add it back */
+
+        const idArray = value.map((label) => this.userProfiles.find((profile) => profile.label === label).id)
+
+        this.$emit('change', idArray)
       },
-    },
-    optionsWithValues() {
-      const options = [
-        ...this.filteredOptions,
-        ...this.value.map((userId) => this.userProfiles.find((profile) => profile.id === userId)),
-      ]
-      return [...new Set(options)]
     },
   },
   methods: {
