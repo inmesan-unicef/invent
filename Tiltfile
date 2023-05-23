@@ -2,8 +2,10 @@ load('ext://helm_resource', 'helm_resource', 'helm_repo')
 load('ext://uibutton', 'cmd_button', 'bool_input', 'text_input', 'location')
 
 # Add PostgreSQL Helm resource (https://artifacthub.io/packages/helm/bitnami/postgresql)
-helm_repo('bitnami', 'https://charts.bitnami.com/bitnami',labels=['helm-charts'])
-helm_repo('codecentric', 'https://codecentric.github.io/helm-charts',labels=['helm-charts'])
+helm_repo('bitnami', 'https://charts.bitnami.com/bitnami',
+          labels=['helm-charts'])
+helm_repo('codecentric', 'https://codecentric.github.io/helm-charts',
+          labels=['helm-charts'])
 helm_resource(
     resource_deps=['bitnami'],
     name='postgres',
@@ -32,7 +34,7 @@ local_resource(
     """,
     allow_parallel=True,
     labels=['database']
-    )
+)
 
 local_resource(
     name='import-dump',
@@ -41,7 +43,7 @@ local_resource(
     """,
     allow_parallel=True,
     labels=['database']
-    )
+)
 
 helm_resource(
     resource_deps=['bitnami'],
@@ -102,39 +104,50 @@ helm_resource(
 # Add a button to quickly run a command in a pod
 # Execute Unit Tests
 cmd_button('exec_unit_tests',
-    argv=os_command + [pod_exec_script],
-    resource='invent-django',
-    env=[
-        'deployment=invent-django',
-        'command=/bin/bash run_unit_tests.sh 100',
-    ],
-    icon_name='check_circle',
-    text='Execute Unit Tests',
-)
+           argv=os_command + [pod_exec_script],
+           resource='invent-django',
+           env=[
+               'deployment=invent-django',
+               'command=/bin/bash run_unit_tests.sh 100',
+           ],
+           icon_name='check_circle',
+           text='Execute Unit tests',
+           )
 
 # Create the Super User in Django
 cmd_button('exec_create_super_user',
-    argv=os_command + [pod_exec_script],
-    resource='invent-django',
-    env=[
-        'deployment=invent-django',
-        'command=echo "from django.contrib.auth.models import User; User.objects.create_superuser(\'admin_test12345\', \'admin_test12345@example.com\', \'12345\')" | python manage.py shell',
-    ],
-    icon_name='check_circle',
-    text='Create the Super User',
-)
+           argv=os_command + [pod_exec_script],
+           resource='invent-django',
+           env=[
+               'deployment=invent-django',
+               'command=echo "from django.contrib.auth.models import User; User.objects.create_superuser(\'admin_test12345\', \'admin_test12345@example.com\', \'12345\')" | python manage.py shell',
+           ],
+           icon_name='check_circle',
+           text='Create superuser',
+           )
 
 # Run the django migrations
 cmd_button('exec_migrate',
-    argv=os_command + [pod_exec_script],
-    resource='invent-django',
-    env=[
-        'deployment=invent-django',
-        'command=python manage.py migrate --noinput',
-    ],
-    icon_name='check_circle',
-    text='Run the django migrations',
-)
+           argv=os_command + [pod_exec_script],
+           resource='invent-django',
+           env=[
+               'deployment=invent-django',
+               'command=python manage.py migrate --noinput',
+           ],
+           icon_name='check_circle',
+           text='Run migrations',
+           )
+
+cmd_button('exec_copy_migration_files',
+           argv=os_command + [pod_exec_script],
+           resource='invent-django',
+           env=[
+               'deployment=invent-django',
+               'command=python manage.py makemigrations && sh -c "find /src -type d -name \'migrations\' -print0 | xargs -0 tar -cf /tmp/migrations.tar"',
+           ],
+           icon_name='check_circle',
+           text='Extract migration files',
+           )
 
 ############# FE Tilt Configuration ##################
 
@@ -160,13 +173,13 @@ yaml = helm(
     values=['./frontend/helm/values-dev.yaml'],
     # Values to set from the command-line
     set=['ingress.enabled=false']
-  )
+)
 k8s_yaml(yaml)
 
 k8s_resource(
     'invent-frontend',
     port_forwards='80:80',
-    objects = ['invent-frontend:ServiceAccount'],
+    objects=['invent-frontend:ServiceAccount'],
     pod_readiness='wait',
     labels='frontend'
 )
