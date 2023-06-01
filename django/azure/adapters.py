@@ -299,3 +299,53 @@ class AzureUserManagement:
 
     def is_auto_signup_allowed(self, request, sociallogin):
         return True
+
+
+    def get_user_aad_data(self, user_id):
+        """
+        Fetches and processes a specific Azure Active Directory (AAD) user by ID.
+
+        This function fetches the user from AAD, processes it, and then saves it.
+
+        Parameters
+        ----------
+        user_id : str
+            The ID of the user to fetch and process.
+
+        Raises
+        ------
+        requests.exceptions.RequestException
+            If an error occurs while making the request to fetch the user.
+        """
+        # Construct URL for fetching the specific user
+        url = f'{settings.AZURE_GET_USERS_URL}/{user_id}'
+        # Get access token and set headers for the request
+        token = self.get_access_token()
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        }
+
+        try:
+            # Make request to fetch the user
+            response = requests.get(url, headers=headers)
+            # Raise exception if status code is not 200
+            response.raise_for_status()
+            # Parse response data
+            user_data = response.json()
+
+            logger.info(f'Fetched user with id: {user_id}')
+            
+            # Process the fetched user
+            new_users, updated_users, skipped_users = self.save_aad_users([user_data])
+
+            logger.info(
+                f'Finished processing user with id: {user_id}. '
+                f'New user created: {len(new_users)}. '
+                f'Current user updated: {len(updated_users)}. '
+                f'User skipped due to inconsistencies: {len(skipped_users)}.\n'
+                f'Updated user details: '
+                f'{[(user["user"].id, user["user"].email, user["changes"]) for user in updated_users]}'
+            )
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Error while making request to {url}: {e}")
