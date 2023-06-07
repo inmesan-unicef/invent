@@ -9,7 +9,12 @@ from django.http import QueryDict
 
 from core.models import ExtendedModel
 from country.models import Country, CountryOffice
-from project.models import Project, HealthFocusArea, DigitalStrategy, ProjectPortfolioState
+from project.models import (
+    Project,
+    HealthFocusArea,
+    DigitalStrategy,
+    ProjectPortfolioState,
+)
 from user.models import Organisation
 
 
@@ -51,6 +56,8 @@ class ProjectSearch(ExtendedModel):
         "stage": "project__data__current_phase",
         "iw": "innovation_ways",
         "us": "unicef_sector",
+        "uls": "unicef_leading_sector",
+        "uss": "unicef_supporting_sectors",
         "hp": "hardware",
         "pp": "nontech",
         "pf": "functions",
@@ -58,8 +65,12 @@ class ProjectSearch(ExtendedModel):
         "rp": "regional_priorities",
     }
 
-    project = models.OneToOneField(Project, on_delete=models.CASCADE, primary_key=True, related_name='search')
-    country_office = models.ForeignKey(CountryOffice, null=True, on_delete=models.SET_NULL)
+    project = models.OneToOneField(
+        Project, on_delete=models.CASCADE, primary_key=True, related_name="search"
+    )
+    country_office = models.ForeignKey(
+        CountryOffice, null=True, on_delete=models.SET_NULL
+    )
     country = models.ForeignKey(Country, null=True, on_delete=models.SET_NULL)
     organisation = models.ForeignKey(Organisation, null=True, on_delete=models.SET_NULL)
 
@@ -78,20 +89,26 @@ class ProjectSearch(ExtendedModel):
     innovation_categories = ArrayField(models.IntegerField(), default=list)
     innovation_ways = ArrayField(models.IntegerField(), default=list)
     unicef_sector = ArrayField(models.IntegerField(), default=list)
+    unicef_supporting_sectors = ArrayField(models.IntegerField(), default=list)
+    unicef_leading_sector = models.IntegerField(null=True)
     hardware = ArrayField(models.IntegerField(), default=list)
     nontech = ArrayField(models.IntegerField(), default=list)
     functions = ArrayField(models.IntegerField(), default=list)
     regional_priorities = ArrayField(models.IntegerField(), default=list)
 
     @classmethod
-    def search(cls, queryset: QuerySet, search_term: str, search_in: List[str]) -> QuerySet:
+    def search(
+        cls, queryset: QuerySet, search_term: str, search_in: List[str]
+    ) -> QuerySet:
         """
         Search in QuerySet
         search_term: search term
         search_in: what field to search in
         """
         selectable_fields = set(cls.SEARCH_BY.keys())
-        selected_fields = selectable_fields & set(search_in) if search_in else selectable_fields
+        selected_fields = (
+            selectable_fields & set(search_in) if search_in else selectable_fields
+        )
         q = Q()
 
         for field in selected_fields:
@@ -128,31 +145,65 @@ class ProjectSearch(ExtendedModel):
         if selected_fields:
             for field in selected_fields:
                 if query_params[field]:
-                    if field in ["country", "co", "region", "goal", "result", "ro", "is", "stage"]:
+                    if field in [
+                        "country",
+                        "co",
+                        "region",
+                        "goal",
+                        "result",
+                        "ro",
+                        "is",
+                        "stage",
+                    ]:
                         lookup_param = "in"
                         lookup = lookup_cleanup(query_params.getlist(field))
-                    elif field in ["donor", "sw", "dhi", "hfa", "hsc",
-                                   "cl", "cc", "cs", "ic",
-                                   "iw", "us", "hp", "pp", "pf", "rp"]:
+                    elif field in [
+                        "donor",
+                        "sw",
+                        "dhi",
+                        "hfa",
+                        "hsc",
+                        "cl",
+                        "cc",
+                        "cs",
+                        "ic",
+                        "iw",
+                        "us",
+                        "uss",
+                        "uls",
+                        "hp",
+                        "pp",
+                        "pf",
+                        "rp",
+                    ]:
                         lookup_param = "overlap"  # This is the OR clause here
                         lookup = lookup_cleanup(query_params.getlist(field))
                     elif field == "approved":
                         lookup_param = "exact"
-                        lookup = query_params.get(field) == '1'
+                        lookup = query_params.get(field) == "1"
                     elif field == "portfolio":
-                        filter_params = dict(scale_phase=query_params.get('sp'),
-                                             portfolio_id=query_params.get('portfolio'),
-                                             psa=query_params.get('ps'),
-                                             approved=not query_params.get('review', False))
-                        pps_filter_params = {k: v for k, v in filter_params.items() if v is not None}
+                        filter_params = dict(
+                            scale_phase=query_params.get("sp"),
+                            portfolio_id=query_params.get("portfolio"),
+                            psa=query_params.get("ps"),
+                            approved=not query_params.get("review", False),
+                        )
+                        pps_filter_params = {
+                            k: v for k, v in filter_params.items() if v is not None
+                        }
                         lookup_param = "in"
-                        lookup = list(ProjectPortfolioState.objects.filter(**pps_filter_params)
-                                      .values_list('pk', flat=True))
+                        lookup = list(
+                            ProjectPortfolioState.objects.filter(
+                                **pps_filter_params
+                            ).values_list("pk", flat=True)
+                        )
 
                         if not lookup:
                             return queryset.none()
 
-                    queryset &= queryset.filter(**{"{}__{}".format(cls.FILTER_BY[field], lookup_param): lookup})
+                    queryset &= queryset.filter(
+                        **{"{}__{}".format(cls.FILTER_BY[field], lookup_param): lookup}
+                    )
         return queryset
 
     @classmethod
@@ -166,8 +217,9 @@ class ProjectSearch(ExtendedModel):
         found_in = {}
 
         for field, exp in cls.SEARCH_BY.items():
-            project_ids = queryset.filter(**{"{}__icontains".format(exp): search_term})\
-                .values_list('project_id', flat=True)
+            project_ids = queryset.filter(
+                **{"{}__icontains".format(exp): search_term}
+            ).values_list("project_id", flat=True)
             found_in[field] = project_ids
 
         return found_in
@@ -177,38 +229,66 @@ class ProjectSearch(ExtendedModel):
         Update search object from project object
         """
         if project.public_id and project.is_active:
-            self.country_office_id = int(project.data.get("country_office")) \
-                if project.data.get("country_office") else None
+            self.country_office_id = (
+                int(project.data.get("country_office"))
+                if project.data.get("country_office")
+                else None
+            )
             self.country_id = int(project.data["country"])
             self.organisation_id = int(project.data["organisation"])
 
             self.donors = [int(x) for x in project.data.get("donors", [])]
 
-            self.software = project.data.get('platforms')
-            self.hsc = project.data.get('hsc_challenges')
-            self.dhi_categories = list(set(filter(None.__ne__,
-                                                  [DigitalStrategy.get_parent_id(int(id), 'parent') for
-                                                   id in project.data.get("dhis", [])])))
-            self.hfa_categories = list(set(filter(None.__ne__,
-                                                  [HealthFocusArea.get_parent_id(int(id), 'health_category') for
-                                                   id in project.data.get("health_focus_areas", [])])))
-            self.capability_levels = project.data.get('capability_levels')
-            self.capability_categories = project.data.get('capability_categories')
-            self.capability_subcategories = project.data.get('capability_subcategories')
-            self.innovation_categories = project.data.get('innovation_categories', [])
-            self.innovation_ways = project.data.get('innovation_ways', [])
-            self.unicef_sector = project.data.get('unicef_sector', [])
-            self.hardware = project.data.get('hardware', [])
-            self.nontech = project.data.get('nontech', [])
-            self.functions = project.data.get('functions', [])
-            self.regional_priorities = project.data.get('regional_priorities', [])
-            self.partner_names = ", ".join([x.get('partner_name', "") for x in project.data.get("partners")]) \
-                if project.data.get("partners") else ""
+            self.software = project.data.get("platforms")
+            self.hsc = project.data.get("hsc_challenges")
+            self.dhi_categories = list(
+                set(
+                    filter(
+                        None.__ne__,
+                        [
+                            DigitalStrategy.get_parent_id(int(id), "parent")
+                            for id in project.data.get("dhis", [])
+                        ],
+                    )
+                )
+            )
+            self.hfa_categories = list(
+                set(
+                    filter(
+                        None.__ne__,
+                        [
+                            HealthFocusArea.get_parent_id(int(id), "health_category")
+                            for id in project.data.get("health_focus_areas", [])
+                        ],
+                    )
+                )
+            )
+            self.capability_levels = project.data.get("capability_levels")
+            self.capability_categories = project.data.get("capability_categories")
+            self.capability_subcategories = project.data.get("capability_subcategories")
+            self.innovation_categories = project.data.get("innovation_categories", [])
+            self.innovation_ways = project.data.get("innovation_ways", [])
+            self.unicef_sector = project.data.get("unicef_sector", [])
+            self.unicef_supporting_sectors = project.data.get(
+                "unicef_supporting_sectors", []
+            )
+            self.unicef_leading_sector = project.data.get("unicef_leading_sector")
+            self.hardware = project.data.get("hardware", [])
+            self.nontech = project.data.get("nontech", [])
+            self.functions = project.data.get("functions", [])
+            self.regional_priorities = project.data.get("regional_priorities", [])
+            self.partner_names = (
+                ", ".join(
+                    [x.get("partner_name", "") for x in project.data.get("partners")]
+                )
+                if project.data.get("partners")
+                else ""
+            )
             self.save()
 
     def reset(self):
         for field in self._meta.fields:
-            if field.name not in ('created', 'modified', 'project'):
+            if field.name not in ("created", "modified", "project"):
                 setattr(self, field.name, field.get_default())
         self.save()
 
@@ -221,11 +301,11 @@ def create_search_objects(sender, instance, created, **kwargs):
 
 @receiver(post_save, sender=Project)
 def remove_search_objects(sender, instance, **kwargs):  # pragma: no cover
-    if not instance.is_active and getattr(instance, 'search', None):
+    if not instance.is_active and getattr(instance, "search", None):
         instance.search.reset()
 
 
 @receiver(post_save, sender=Project)
 def update_with_project_data(sender, instance, **kwargs):
-    if instance.is_active and instance.public_id and getattr(instance, 'search', None):
+    if instance.is_active and instance.public_id and getattr(instance, "search", None):
         instance.search.update(instance)

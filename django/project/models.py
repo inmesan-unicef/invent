@@ -742,6 +742,15 @@ class UNICEFSector(InvalidateCacheMixin, ExtendedNameOrderedSoftDeletedModel):
         verbose_name_plural = "UNICEF Sectors"
 
 
+class UNICEFLeadingSector(InvalidateCacheMixin, ExtendedNameOrderedSoftDeletedModel):
+    unicef_leading_sector = models.IntegerField(null=True)
+
+
+class UNICEFSupportingSector(InvalidateCacheMixin, ExtendedNameOrderedSoftDeletedModel):
+    class Meta(ExtendedNameOrderedSoftDeletedModel.Meta):
+        verbose_name_plural = "UNICEF Supporting Sectors"
+
+
 class RegionalPriority(InvalidateCacheMixin, ExtendedNameOrderedSoftDeletedModel):
     region = models.IntegerField(choices=CountryOffice.REGIONS, null=True, blank=True)
 
