@@ -10,6 +10,15 @@ class UserProfileViewSet(TokenAuthMixin, RetrieveModelMixin, UpdateModelMixin, G
     queryset = UserProfile.objects.all()
     serializer_class = UserProfileSerializer
 
+    def get_queryset(self):
+        """
+        Fetches related user and organisation objects in a single query using select_related,
+        and fetches related country objects in a separate query using prefetch_related,
+        which optimizes the number of database queries and improves performance.
+        """
+        return UserProfile.objects.select_related('user', 'organisation').prefetch_related('country').only(
+            'id', 'modified', 'account_type', 'name', 'user__email', 'organisation', 'job_title', 'department', 'country', "region")
+
 
 class UserProfileListViewSet(TokenAuthMixin, ListModelMixin, GenericViewSet):
     # Fetch user and organisation objects in a single query using select_related,
