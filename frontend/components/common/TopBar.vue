@@ -5,8 +5,8 @@
         <nuxt-link :to="localePath({ name: 'organisation', params: $route.params })">
           <el-row type="flex" align="middle">
             <el-col class="LogoUnicef">
-              <img class="UnicefLogoNormal" src="/unicef-logo-banner.svg" alt="Unicef" />
-              <img class="UnicefLogoLong" src="/unicef-logo-horizontal.svg" alt="Unicef" />
+              <!-- <img class="UnicefLogoNormal" src="/unicef-logo-banner.svg" alt="Unicef" /> -->
+              <img class="UnicefLogoLong" src="/unicef-logo-horizontal.svg" alt="Unicef" loading="lazy" />
             </el-col>
           </el-row>
         </nuxt-link>
@@ -167,15 +167,16 @@ export default {
     .limitPageWidth();
     background-color: @colorWhite;
     align-items: stretch;
+    height: 56px;
 
     &.IsAuth {
-      height: @topBarHeight !important;
+      // height: @topBarHeightSubpage;
     }
   }
 
   .LogoHolder {
     display: flex;
-    // align-self: flex-start;
+    align-self: center;
     width: auto;
 
     .LogoWHO {
@@ -202,10 +203,9 @@ export default {
       top: 2px;
 
       img.UnicefLogoNormal {
-        padding-bottom: 10px;
+        display: none;
       }
       img.UnicefLogoLong {
-        display: none;
       }
     }
 
