@@ -109,17 +109,6 @@ MIDDLEWARE = [
     'author.middlewares.AuthorDefaultBackendMiddleware',
 ]
 
-if DEBUG:
-    INSTALLED_APPS.insert(0, 'debug_toolbar')
-
-    MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
-
-    # Set the IP addresses that the toolbar should be shown for. 
-    # For development, we can use the following setting to show it for all IPs:
-    INTERNAL_IPS = [
-        '127.0.0.1',
-    ]
-
 ROOT_URLCONF = 'tiip.urls'
 
 TEMPLATES = [
@@ -422,4 +411,5 @@ if ENVIRONMENT in ['dev']:
         'APPLICATIONINSIGHTS_CONNECTION_STRING', default='')
 
     if APPLICATIONINSIGHTS_CONNECTION_STRING:  # Ensure the connection string exists
-        configure_azure_monitor(connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING)
+        configure_azure_monitor(
+            connection_string=APPLICATIONINSIGHTS_CONNECTION_STRING)

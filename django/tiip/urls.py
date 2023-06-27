@@ -37,9 +37,7 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:  # pragma: no cover
-    import debug_toolbar
     urlpatterns.append(url(r'^api/devdocs/', include_docs_urls(title=API_TITLE, description=API_DESCRIPTION)))
-    urlpatterns.append(url(r'^__debug__/', include(debug_toolbar.urls)))
 
 api_info = openapi.Info(
     title=API_TITLE,
